@@ -304,7 +304,7 @@ SELECT * FROM Movie;
 
 ```sql
 --- SQL query to retrieve data from the table Show
-SELECT * FROM Show;
+SELECT * FROM `Show`;
 ```
 
 #### Ticket
@@ -348,7 +348,7 @@ UPDATE Movie SET Name = 'Avengers: Endgame - 3D' WHERE MovieID = 1;
 
 ```sql
 --- SQL query to update data in the table Show
-UPDATE Show SET ShowTime = '10:00:00' WHERE ShowID = 1;
+UPDATE `Show` SET ShowTime = '10:00:00' WHERE ShowID = 1;
 ```
 
 #### Ticket
@@ -392,7 +392,7 @@ DELETE FROM Movie WHERE MovieID = 1;
 
 ```sql
 --- SQL query to delete data from the table Show
-DELETE FROM Show WHERE ShowID = 1;
+DELETE FROM `Show` WHERE ShowID = 1;
 ```
 
 #### Ticket
@@ -420,7 +420,7 @@ DELETE FROM Booking WHERE BookingID = 1;
 
 ```sql
 --- SQL query to list shows on a given date at a given theatre
-SELECT * FROM Show WHERE TheatreID = 1 AND ShowDate = '2019-07-01';
+SELECT * FROM `Show` WHERE TheatreID = 1 AND ShowDate = '2019-07-01';
 ```
 
 ```sql
