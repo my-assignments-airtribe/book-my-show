@@ -1,8 +1,24 @@
 # Bookmyshow Database Structure Documentation
 
+## Table of Contents
+- [Introduction](#introduction)
+- [Pre-requisites](#pre-requisites)
+- [Entities and Attributes](#entities-and-attributes)
+- [Theatre](#theatre)
+- [Movie](#movie)
+- [Show](#show)
+- [Ticket](#ticket)
+- [User](#user)
+- [Booking](#booking)
+
+
 ## Introduction
 
 This document outlines the database structure for a ticketing platform similar to Bookmyshow. It includes entities, attributes, table structures, sample entries, and SQL query solutions.
+
+## Pre-requisites
+- MySQL
+- Dbeaver (or any other MySQL client) [Download DBeaver Client](https://dbeaver.io/download/)
 
 ## Entities and Attributes
 
