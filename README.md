@@ -415,6 +415,14 @@ JOIN Movie m ON s.MovieID = m.MovieID
 WHERE s.TheatreID = 1 AND s.ShowDate = '2019-07-01';
 ```
 
+#### Sample Output
+
+![Sample Output](./sample.png)
+
 ## ER Diagram
 
 ![ER Diagram](./er-diagram.png)
+
+
+## Testing
+The SQL statements provided have been tested on MySQL using Dbeaver.
