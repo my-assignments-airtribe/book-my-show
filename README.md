@@ -414,3 +414,7 @@ FROM Show s
 JOIN Movie m ON s.MovieID = m.MovieID
 WHERE s.TheatreID = 1 AND s.ShowDate = '2019-07-01';
 ```
+
+## ER Diagram
+
+![ER Diagram](./er-diagram.png)
