@@ -486,13 +486,27 @@ BEGIN
     DECLARE v_TicketID INT;
     DECLARE v_SeatNumber VARCHAR(255);
     DECLARE v_ShowID INT;
-    DECLARE v_SeatsAvailable INT;
+    -- DECLARE v_SeatsAvailable INT;
     DECLARE v_Index INT DEFAULT 1;
     DECLARE v_TicketIDsArrayLength INT;
+
+    -- Temporary tables or string variables to accumulate data
+    DECLARE bookingEntries TEXT DEFAULT '';
+    DECLARE ticketUpdates TEXT DEFAULT '';
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         -- Rollback if error occurs
         ROLLBACK;
     END;
+    -- DECLARE showUpdates TEXT DEFAULT '';
+    CREATE TEMPORARY TABLE IF NOT EXISTS TempShowUpdates (
+      ShowID INT,
+      TicketCount INT
+    );
+
+    -- Reset the temporary table
+    TRUNCATE TABLE TempShowUpdates;
     
     -- Calculate the number of tickets
     SET v_TicketIDsArrayLength = (LENGTH(p_TicketIDs) - LENGTH(REPLACE(p_TicketIDs, ',', ''))) + 1;
@@ -505,31 +519,72 @@ BEGIN
         SET v_TicketID = CAST(SPLIT_STR(p_TicketIDs, ',', v_Index) AS UNSIGNED);
         SET v_SeatNumber = SPLIT_STR(p_SeatNumbers, ',', v_Index);
 
-        -- Insert into Booking table
-        INSERT INTO Booking (UserID, TicketID, BookingDate) 
-        VALUES (p_UserID, v_TicketID, p_BookingDate);
+        -- Accumulate booking entries
+        SET bookingEntries = CONCAT(bookingEntries, '(', p_UserID, ',', v_TicketID, ',', QUOTE(p_BookingDate), '),');
 
-        -- Update SeatsAllotted in Ticket table
-        UPDATE Ticket 
-        SET SeatsAllotted = CONCAT(IFNULL(SeatsAllotted, ''), ',', v_SeatNumber) 
-        WHERE TicketID = v_TicketID;
+        -- Accumulate ticket updates
+        SET ticketUpdates = CONCAT(ticketUpdates, 'WHEN ', v_TicketID, ' THEN CONCAT(SeatsAllotted, \',\', ', QUOTE(v_SeatNumber), ') ');
 
-        -- Get ShowID from Ticket
+        -- Accumulate show updates (count tickets per show)
+        -- SET showUpdates = CONCAT(showUpdates, 'WHEN ', v_ShowID, ' THEN SeatsAvailable - 1 ');
+
+        -- -- Insert into Booking table
+        -- INSERT INTO Booking (UserID, TicketID, BookingDate) 
+        -- VALUES (p_UserID, v_TicketID, p_BookingDate);
+
+        -- -- Update SeatsAllotted in Ticket table
+        -- UPDATE Ticket 
+        -- SET SeatsAllotted = CONCAT(IFNULL(SeatsAllotted, ''), ',', v_SeatNumber) 
+        -- WHERE TicketID = v_TicketID;
+
+        -- -- Get ShowID from Ticket
+        -- SELECT ShowID INTO v_ShowID FROM Ticket WHERE TicketID = v_TicketID;
+
+        -- -- Get current SeatsAvailable from Show
+        -- SELECT SeatsAvailable INTO v_SeatsAvailable FROM `Show` WHERE ShowID = v_ShowID;
+
+        -- -- Update SeatsAvailable in Show table
+        -- Extract ShowID for each ticket and insert into temporary table
         SELECT ShowID INTO v_ShowID FROM Ticket WHERE TicketID = v_TicketID;
-
-        -- Get current SeatsAvailable from Show
-        SELECT SeatsAvailable INTO v_SeatsAvailable FROM `Show` WHERE ShowID = v_ShowID;
-
-        -- Update SeatsAvailable in Show table
-        UPDATE `Show` 
-        SET SeatsAvailable = v_SeatsAvailable - 1 
-        WHERE ShowID = v_ShowID;
+        INSERT INTO TempShowUpdates (ShowID, TicketCount)
+        VALUES (v_ShowID, 1)
+        ON DUPLICATE KEY UPDATE TicketCount = TicketCount + 1;
+        -- UPDATE `Show` 
+        -- SET SeatsAvailable = v_SeatsAvailable - 1 
+        -- WHERE ShowID = v_ShowID;
 
         SET v_Index = v_Index + 1;
     END WHILE;
 
+    -- Remove trailing comma
+    SET bookingEntries = LEFT(bookingEntries, LENGTH(bookingEntries) - 1);
+
+    -- Bulk insert into Booking
+    SET @s = CONCAT('INSERT INTO Booking (UserID, TicketID, BookingDate) VALUES ', bookingEntries);
+    PREPARE stmt FROM @s;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+
+    -- Bulk update Ticket
+    SET @s = CONCAT('UPDATE Ticket SET SeatsAllotted = CASE TicketID ', ticketUpdates, ' END WHERE TicketID IN (', p_TicketIDs, ')');
+    PREPARE stmt FROM @s;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+
+    -- Bulk update Shows
+    -- SET @s = CONCAT('UPDATE `Show` SET SeatsAvailable = CASE ShowID ', showUpdates, ' END WHERE ShowID IN (SELECT DISTINCT ShowID FROM Ticket WHERE TicketID IN (', p_TicketIDs, '))');
+    -- PREPARE stmt FROM @s;
+    -- EXECUTE stmt;
+    -- DEALLOCATE PREPARE stmt;
+    UPDATE `Show` AS s
+    JOIN (SELECT ShowID, SUM(TicketCount) AS TotalTickets FROM TempShowUpdates GROUP BY ShowID) AS t
+    ON s.ShowID = t.ShowID
+    SET s.SeatsAvailable = s.SeatsAvailable - t.TotalTickets;
+
     -- Commit transaction
     COMMIT;
+
+    DROP TEMPORARY TABLE IF EXISTS TempShowUpdates;
 END$$
 
 DELIMITER ;
