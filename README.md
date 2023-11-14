@@ -132,6 +132,10 @@ CREATE TABLE Theatre (
   Location VARCHAR(255) NOT NULL,
   PRIMARY KEY (TheatreID)
 );
+
+ALTER TABLE Theatre
+ADD COLUMN CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 ```
 
 #### Movie
@@ -147,6 +151,10 @@ CREATE TABLE Movie (
   ReleaseDate DATE NOT NULL,
   PRIMARY KEY (MovieID)
 );
+
+ALTER TABLE Movie
+ADD COLUMN CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 ```
 
 ```sql
@@ -171,6 +179,11 @@ CREATE TABLE `Show` (
   FOREIGN KEY (TheatreID) REFERENCES Theatre(TheatreID),
   FOREIGN KEY (MovieID) REFERENCES Movie(MovieID)
 );
+
+ALTER TABLE `Show`
+ADD COLUMN SeatsAvailable INT NOT NULL;
+ADD COLUMN CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 ```
 
 #### Ticket
@@ -187,6 +200,11 @@ CREATE TABLE Ticket (
   FOREIGN KEY (ShowID) REFERENCES `Show`(ShowID),
   FOREIGN KEY (TheatreID) REFERENCES Theatre(TheatreID)
 );
+
+ALTER TABLE Ticket
+ADD COLUMN SeatsAllotted VARCHAR(255) NOT NULL;
+ADD COLUMN CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 ```
 
 #### User
@@ -201,6 +219,10 @@ CREATE TABLE User (
   Password VARCHAR(255) NOT NULL,
   PRIMARY KEY (UserID)
 );
+
+ALTER TABLE User
+ADD COLUMN CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 ```
 
 #### Booking
@@ -216,6 +238,10 @@ CREATE TABLE Booking (
   FOREIGN KEY (UserID) REFERENCES User(UserID),
   FOREIGN KEY (TicketID) REFERENCES Ticket(TicketID)
 );
+
+ALTER TABLE Booking
+ADD COLUMN CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN UpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 ```
 
 ### 2 . SQL queries to insert data into the tables [Sample Data]
@@ -244,25 +270,29 @@ INSERT INTO Movie (Name, Language, Genre, Rating Duration, ReleaseDate) VALUES
 
 ```sql
 --- SQL query to insert data into the table Show
-INSERT INTO `Show` (TheatreID, MovieID, ShowDate, ShowTime) VALUES
-  (1, 1, '2019-07-01', '09:00:00'),
-  (1, 1, '2019-07-01', '12:00:00'),
-  (1, 1, '2019-07-01', '15:00:00'),
-  (1, 1, '2019-07-01', '18:00:00'),
-  (1, 1, '2019-07-01', '21:00:00'),
-  (1, 2, '2019-07-01', '09:00:00');
+INSERT INTO `Show` (TheatreID, MovieID, ShowDate, ShowTime, SeatsAvailable) VALUES
+  (1, 1, '2019-07-01', '09:00:00', 0),
+  (1, 1, '2019-07-01', '12:00:00', 0),
+  (1, 1, '2019-07-01', '15:00:00', 0),
+  (1, 1, '2019-07-01', '18:00:00', 0),
+  (1, 1, '2019-07-01', '21:00:00', 0),
+  (1, 2, '2019-07-01', '09:00:00', 0);
+```
+```sql
+--- SQL query to update SeatsAvailable in the table Show
+UPDATE `Show` SET SeatsAvailable = 100 WHERE ShowID = 1;
 ```
 
 #### Ticket
 
 ```sql
 --- SQL query to insert data into the table Ticket
-INSERT INTO Ticket (ShowID, TheatreID, SeatNumber, Price) VALUES
-  (1, 1, 'A1', 300),
-  (1, 1, 'A2', 300),
-  (1, 1, 'A3', 300),
-  (1, 1, 'A4', 300),
-  (1, 1, 'A5', 300);
+INSERT INTO Ticket (ShowID, TheatreID, SeatNumber, Price, SeatsAllotted) VALUES
+  (1, 1, 'A1', 300, ''),
+  (1, 1, 'A2', 300, ''),
+  (1, 1, 'A3', 300, ''),
+  (1, 1, 'A4', 300, ''),
+  (1, 1, 'A5', 300, '');
 ```
 
 #### User
@@ -416,7 +446,105 @@ DELETE FROM User WHERE UserID = 1;
 DELETE FROM Booking WHERE BookingID = 1;
 ```
 
-### 6 . SQL Query to List Shows on a Given Date at a Given Theatre along with their show times
+### 6. Stored Procedure to Book a Ticket
+
+```sql
+DELIMITER $$
+
+CREATE FUNCTION SPLIT_STR(
+  x VARCHAR(255),
+  delim VARCHAR(12),
+  pos INT
+) RETURNS VARCHAR(255)
+DETERMINISTIC
+BEGIN
+    RETURN REPLACE(SUBSTRING(SUBSTRING_INDEX(x, delim, pos),
+               LENGTH(SUBSTRING_INDEX(x, delim, pos -1)) + 1),
+               delim, '');
+END$$
+
+DELIMITER ;
+
+
+```
+#### Testing the function
+
+```sql
+SELECT SPLIT_STR('1,2,3', ',', 1);
+```
+
+```sql
+DELIMITER $$
+
+CREATE PROCEDURE BookMultipleTickets(
+    IN p_UserID INT,
+    IN p_TicketIDs VARCHAR(255),
+    IN p_SeatNumbers VARCHAR(255),
+    IN p_BookingDate DATETIME
+)
+BEGIN
+    DECLARE v_TicketID INT;
+    DECLARE v_SeatNumber VARCHAR(255);
+    DECLARE v_ShowID INT;
+    DECLARE v_SeatsAvailable INT;
+    DECLARE v_Index INT DEFAULT 1;
+    DECLARE v_TicketIDsArrayLength INT;
+    BEGIN
+        -- Rollback if error occurs
+        ROLLBACK;
+    END;
+    
+    -- Calculate the number of tickets
+    SET v_TicketIDsArrayLength = (LENGTH(p_TicketIDs) - LENGTH(REPLACE(p_TicketIDs, ',', ''))) + 1;
+
+    -- Start transaction
+    START TRANSACTION;
+
+    WHILE v_Index <= v_TicketIDsArrayLength DO
+        -- Extract ticket ID and seat number
+        SET v_TicketID = CAST(SPLIT_STR(p_TicketIDs, ',', v_Index) AS UNSIGNED);
+        SET v_SeatNumber = SPLIT_STR(p_SeatNumbers, ',', v_Index);
+
+        -- Insert into Booking table
+        INSERT INTO Booking (UserID, TicketID, BookingDate) 
+        VALUES (p_UserID, v_TicketID, p_BookingDate);
+
+        -- Update SeatsAllotted in Ticket table
+        UPDATE Ticket 
+        SET SeatsAllotted = CONCAT(IFNULL(SeatsAllotted, ''), ',', v_SeatNumber) 
+        WHERE TicketID = v_TicketID;
+
+        -- Get ShowID from Ticket
+        SELECT ShowID INTO v_ShowID FROM Ticket WHERE TicketID = v_TicketID;
+
+        -- Get current SeatsAvailable from Show
+        SELECT SeatsAvailable INTO v_SeatsAvailable FROM `Show` WHERE ShowID = v_ShowID;
+
+        -- Update SeatsAvailable in Show table
+        UPDATE `Show` 
+        SET SeatsAvailable = v_SeatsAvailable - 1 
+        WHERE ShowID = v_ShowID;
+
+        SET v_Index = v_Index + 1;
+    END WHILE;
+
+    -- Commit transaction
+    COMMIT;
+END$$
+
+DELIMITER ;
+
+
+
+```
+
+#### Sample Usage
+
+```sql
+CALL BookMultipleTickets(1, '3,4,5', 'A3,B4,B5', '2023-11-14 08:00:00');
+```
+
+### 7. SQL Query to List Shows on a Given Date at a Given Theatre along with their show times
 
 ```sql
 --- SQL query to list shows on a given date at a given theatre
