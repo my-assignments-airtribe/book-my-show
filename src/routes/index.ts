@@ -48,5 +48,14 @@ router.get("/bookings", async (req:Request, res:Response) => {
   }
 });
 
+router.get("/bookings/:bookingId", async (req:Request, res:Response) => {
+  try {
+    // get the booking details
+  }
+  catch (err:any) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
 export default router;
