@@ -1,4 +1,5 @@
 import app from "./app";
+import routes from "./routes";
 
 const PORT = process.env.PORT || 3000;
 
@@ -13,3 +14,5 @@ app.get("/", async (req, res) => {
     console.log(err);
   }
 });
+
+app.use(routes);

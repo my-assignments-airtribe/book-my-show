@@ -118,6 +118,53 @@ To follow the normalization rules up to BCNF, the following tables are created:
 | 2 | 1 | 2 | 2019-07-01 08:00:00 |
 | 3 | 1 | 3 | 2019-07-01 08:00:00 |
 
+## API Documentation
+
+### Theatre Endpoints
+
+- `GET /theatres`: Get all theatres.
+- `GET /theatres/:city`: Get theatres by city.
+- `POST /theatres`: Create a theatre.
+- `PUT /theatres/:theatreId`: Update a theatre.
+- `DELETE /theatres/:theatreId`: Delete a theatre.
+
+### Movie Endpoints
+
+- `GET /movies`: Get all movies.
+- `GET /movies/:movieId`: Get a movie by ID.
+- `POST /movies`: Create a movie.
+- `PUT /movies/:movieId`: Update a movie.
+- `DELETE /movies/:movieId`: Delete a movie.
+
+### Show Endpoints
+
+- `GET /shows/:theatreId/:date`: Get shows by theatre and date.
+- `POST /shows`: Create a show.
+- `PUT /shows/:showId`: Update a show.
+- `DELETE /shows/:showId`: Delete a show.
+
+### Ticket Endpoints
+
+- `GET /tickets/:showId`: Get tickets by show.
+- `POST /tickets`: Create a ticket.
+- `PUT /tickets/:ticketId`: Update a ticket.
+- `DELETE /tickets/:ticketId`: Delete a ticket.
+
+### User Endpoints
+
+- `GET /users`: Get all users.
+- `GET /users/:userId`: Get a user by ID.
+- `POST /users`: Create a user.
+- `PUT /users/:userId`: Update a user.
+- `DELETE /users/:userId`: Delete a user.
+
+### Booking Endpoints
+
+- `GET /bookings/:userId`: Get bookings by user.
+- `POST /bookings`: Create a booking.
+- `PUT /bookings/:bookingId`: Update a booking.
+- `DELETE /bookings/:bookingId`: Delete a booking.
+
 ## SQL Queries
 
 ### 1 . SQL queries to create the tables

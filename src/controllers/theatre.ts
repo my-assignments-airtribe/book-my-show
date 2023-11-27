@@ -16,6 +16,25 @@ export const getTheatres = async (
   }
 }
 
+export const getTheatreById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { id } = req.params;
+  try {
+    const theatre = await TheatreDAO.getTheatreById(Number(id));
+
+    if (!theatre) {
+      return res.status(404).json({ message: "Theater not found" });
+    }
+
+    res.status(200).json(theatre);
+  } catch (error) {
+    next(error);
+  }
+}
+
 // Controller function to get all theatres by city
 export const getTheatresByCity = async (req: Request, res: Response, next: NextFunction) => {
   const { city } = req.params;
